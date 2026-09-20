@@ -24,7 +24,7 @@ has its own board. Boards are not synced by Git.
 In VS Code, press **Ctrl+P** (**Cmd+P** on Mac), paste this line, and press Enter:
 
 ```text
-ext install Valdex.code-kanban
+ext install Valdex.code-kanban-pro
 ```
 
 ## Get started

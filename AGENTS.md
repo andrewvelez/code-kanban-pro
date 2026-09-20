@@ -42,7 +42,7 @@
 
 * Install the packaged extension locally
   >
-  > `code --install-extension code-kanban-1.2.0.vsix`
+  > `code --install-extension code-kanban-pro-1.2.0.vsix`
   >
 
 * Debug the extension

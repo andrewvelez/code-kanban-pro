@@ -1,5 +1,5 @@
 {
-  "name": "code-kanban",
+  "name": "code-kanban-pro",
   "displayName": "Code Kanban Pro",
   "description": "A Markdown kanban board for VS Code with permanent story numbers, rich-text editing, and workspace-local storage.",
   "version": "1.2.0",
@@ -19,8 +19,7 @@
   ],
   "main": "./dist/extension.cjs",
   "activationEvents": [
-    "onWebviewPanel:code-kanban.board",
-    "onView:code-kanban.boardView"
+    "onWebviewPanel:code-kanban.board"
   ],
   "contributes": {
     "commands": [
@@ -50,6 +49,7 @@
         {
           "id": "code-kanban.boardView",
           "name": "Overview",
+          "icon": "media/kanban.svg",
           "type": "webview"
         }
       ]
