@@ -2,32 +2,52 @@
 
 ## Overview
 
-- MLink (formerly Link-Up) is a local-first progressive web app (PWA) for gay men.  It uses Bun.js as a bundler and package manager.  Aside from bundling, Bun is not used as the application's runtime.  The browser and the Web Platform (no TypeScript) are the application's runtime and technology stack.
-- The browser is the application runtime. In being local-first, every effort is made for the app to be 100% cached on the first page load.  This means all assets, javascript, everything that would be in a Bun full stack executable file (minus Bun).
-- The complete current browser build is emitted under `dist/`. Full-stack executable packaging is future work and is not currently implemented.
-- The current design direction for the project is in `docs/DESIGN.md`. Other documents within the docs folder may be out of date.
+- Code Kanban is a VS Code extension for repository-specific Markdown kanban boards with permanent story numbers. The board opens in an editor tab, with an overview and actions in the Activity Bar sidebar.
+- The project uses JavaScript, Node.js, npm, and esbuild. Extension code runs in the VS Code extension host; the board and sidebar run in webviews. The rich-text editor uses Tiptap.
+- Board settings and Markdown story files are stored per repository under `ExtensionContext.storageUri`, outside the repository working tree.
+- `build.js` bundles the extension, board, and sidebar into `dist/`. The extension is distributed as a self-contained VSIX. See `README.md` for usage, storage, and development details.
 
 ## Commands
 
 * Install dependencies
   >
-  > `bun install`
+  > `npm ci`
   >
 
-* Bundle project for production deployment
+* Build the extension and webview bundles
   >
-  > `bun run build` **or** `bun build.js build`
-  >
-
-* Build project and run all tests (tests are coming soon)
-  >
-  > `bun run test` **or** `bun build.js test`
+  > `npm run build`
   >
 
-* Build project and start local dev server
+* Run storage and extension integration tests with Node's test runner
   >
-  > `bun run start` **or** `bun build.js start`
+  > `npm test`
   >
+
+* Install Chromium for browser tests (once)
+  >
+  > `npx playwright install chromium`
+  >
+
+* Build and run browser UI tests with Playwright
+  >
+  > `npm run build && npm run test:ui`
+  >
+  > Alternatively, use an installed Chromium: `CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:ui` after building. UI tests use a substitute VS Code message bridge and regenerate `docs/board.png` and `docs/editor.png`.
+
+* Build and package the extension as a VSIX
+  >
+  > `npm run package`
+  >
+
+* Install the packaged extension locally
+  >
+  > `code --install-extension code-kanban-1.0.0.vsix`
+  >
+
+* Debug the extension
+  >
+  > Press **F5** in VS Code to build and launch the Extension Development Host. Open a repository folder there and run **Code Kanban: Open Kanban Board**.
 
 ## Code Style
 
