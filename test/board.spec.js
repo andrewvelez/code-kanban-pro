@@ -162,3 +162,126 @@ test('long story titles wrap on opening, typing and resizing without changing Ma
   await expect(page.locator('.save-status')).toHaveText('Saved');
   expect((await store.snapshot()).stories[0].content.split('\n')[0]).toBe(`# ${title} More words at the end.`);
 });
+
+test('new-story modal validates, cancels without saving, and creates in the selected column', async ({ page }) => {
+  await open(page);
+  const add = page.getByRole('button', { name: 'Add story to To Do', exact: true });
+  await add.click();
+  const modal = page.getByRole('dialog', { name: 'New story', exact: true });
+  const title = modal.getByLabel('Story title', { exact: true });
+  await expect(title).toBeFocused();
+  await expect(page.locator('.add-story')).toHaveCount(0);
+  await modal.getByRole('button', { name: 'Create story', exact: true }).click();
+  await expect(modal).toBeVisible();
+  expect((await store.snapshot()).stories).toHaveLength(0);
+  await title.fill('   ');
+  await modal.getByRole('button', { name: 'Create story', exact: true }).click();
+  expect(await title.evaluate(input => input.validity.valid)).toBe(false);
+  await title.fill('A cancelled draft');
+  await page.keyboard.press('Escape');
+  await expect(modal).toHaveCount(0);
+  await expect(add).toBeFocused();
+  expect((await store.snapshot()).config.nextNumber).toBe(1);
+  for (const action of ['Cancel', 'Close new story']) {
+    await add.click(); await title.fill('Another cancelled draft');
+    await modal.getByRole('button', { name: action, exact: true }).click();
+    await expect(modal).toHaveCount(0);
+  }
+  await add.click(); await title.fill('A modal story');
+  await modal.getByLabel('Story description', { exact: true }).fill('Some **Markdown** notes.');
+  await modal.getByLabel('Story labels', { exact: true }).fill('ui, release, ui');
+  await modal.locator('summary').click();
+  await expect(modal.getByLabel('Story status', { exact: true })).toHaveValue('todo');
+  await modal.getByLabel('Story priority', { exact: true }).selectOption('high');
+  await modal.getByLabel('Story assignee', { exact: true }).fill('Andrew');
+  await page.keyboard.press('Control+Enter');
+  await expect(modal).toHaveCount(0);
+  await expect(page.locator('[data-status="todo"] .card')).toContainText('A modal story');
+  const stories = (await store.snapshot()).stories;
+  expect(stories).toHaveLength(1);
+  expect(stories[0]).toMatchObject({ number: 1, status: 'todo', priority: 'high', labels: ['ui', 'release'], assignee: 'Andrew', content: '# A modal story\n\nSome **Markdown** notes.' });
+});
+
+test('new-story modal retains failed drafts and prevents duplicate creation', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => {
+    const host = window.hostMessage;
+    let fail = true;
+    window.hostMessage = async message => {
+      if (message.type !== 'create') return host(message);
+      if (fail) { fail = false; return { type: 'result', requestId: message.requestId, error: 'Cannot write story.' }; }
+      await new Promise(resolve => { window.finishCreate = resolve; });
+      return host(message);
+    };
+    window.dispatchEvent(new MessageEvent('message', { data: { type: 'newStory' } }));
+  });
+  const modal = page.getByRole('dialog', { name: 'New story', exact: true });
+  const create = modal.getByRole('button', { name: 'Create story', exact: true });
+  await modal.getByLabel('Story title', { exact: true }).fill('Keep this draft');
+  await create.click();
+  await expect(modal.getByRole('alert')).toHaveText('Cannot write story.');
+  await expect(modal.getByLabel('Story title', { exact: true })).toHaveValue('Keep this draft');
+  await create.click();
+  await expect(modal.getByRole('button', { name: 'Creating…', exact: true })).toBeDisabled();
+  await page.keyboard.press('Control+Enter');
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeVisible();
+  await page.evaluate(() => window.finishCreate());
+  await expect(modal).toHaveCount(0);
+  expect((await store.snapshot()).stories).toHaveLength(1);
+});
+
+test('column colors persist and readable headers work with outlines in both layouts', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'Board settings', exact: true }).click();
+  const colors = page.getByLabel('Column color', { exact: true });
+  await colors.nth(0).fill('#ffffff');
+  await colors.nth(1).fill('#000000');
+  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await page.reload();
+  const backlog = page.locator('[data-status="backlog"] .column-header');
+  const todo = page.locator('[data-status="todo"] .column-header');
+  await expect(backlog).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(backlog).toHaveCSS('color', 'rgb(0, 0, 0)');
+  await expect(todo).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  await expect(todo).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(todo.getByRole('button', { name: 'Add story to To Do', exact: true })).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(page.locator('.column').first()).toHaveCSS('border-top-width', '1px');
+  await page.getByRole('button', { name: 'Collapse Backlog', exact: true }).click();
+  await expect(backlog).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await page.getByRole('button', { name: 'Toggle horizontal / vertical layout', exact: true }).click();
+  await expect(page.locator('.board')).toHaveClass(/vertical/);
+  await expect(page.locator('.column').first()).toHaveCSS('border-top-width', '1px');
+});
+
+test('board and modal follow live VS Code light and dark theme colors', async ({ page }) => {
+  await store.create(data('# Theme example'));
+  await open(page);
+  await page.getByRole('button', { name: 'Add story to Backlog', exact: true }).click();
+  const modal = page.getByRole('dialog', { name: 'New story', exact: true });
+  for (const theme of [
+    { name: 'light', background: '#ffffff', surface: '#f3f3f3', card: '#fafafa', foreground: '#222222', border: '#cccccc', button: '#0066bb' },
+    { name: 'dark', background: '#18181b', surface: '#252526', card: '#303030', foreground: '#eeeeee', border: '#555555', button: '#0e639c' }
+  ]) {
+    await page.evaluate(theme => {
+      document.body.className = `vscode-${theme.name}`;
+      for (const [key, value] of Object.entries({ 'editor-background': theme.background, 'sideBar-background': theme.surface, 'editorWidget-background': theme.card, foreground: theme.foreground, 'panel-border': theme.border, 'button-background': theme.button, 'button-foreground': '#ffffff' })) {
+        document.body.style.setProperty(`--vscode-${key}`, value);
+      }
+    }, theme);
+    const rgb = hex => `rgb(${hex.slice(1).match(/../g).map(value => parseInt(value, 16)).join(', ')})`;
+    await expect(page.locator('body')).toHaveCSS('color-scheme', theme.name);
+    await expect(modal).toHaveCSS('background-color', rgb(theme.background));
+    await expect(modal).toHaveCSS('color', rgb(theme.foreground));
+    await expect(page.locator('.column').first()).toHaveCSS('background-color', rgb(theme.surface));
+    await expect(page.locator('.column').first()).toHaveCSS('border-top-color', rgb(theme.border));
+    await expect(page.locator('.card')).toHaveCSS('background-color', rgb(theme.card));
+    await expect(modal.getByRole('button', { name: 'Create story', exact: true })).toHaveCSS('background-color', rgb(theme.button));
+    await page.screenshot({ path: test.info().outputPath(`new-story-${theme.name}.png`) });
+  }
+  await page.setViewportSize({ width: 360, height: 640 });
+  const bounds = await modal.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(360);
+  await expect(modal.getByRole('button', { name: 'Create story', exact: true })).toBeInViewport();
+});

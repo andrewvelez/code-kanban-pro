@@ -2,7 +2,7 @@
 
 ## Overview
 
-- Code Kanban is a VS Code extension for repository-specific Markdown kanban boards with permanent story numbers. The board opens in an editor tab, with an overview and actions in the Activity Bar sidebar.
+- Code Kanban Pro is a VS Code extension for repository-specific Markdown kanban boards with permanent story numbers. The board opens in an editor tab, with an overview and actions in the Activity Bar sidebar.
 - The project uses JavaScript, Node.js, npm, and esbuild. Extension code runs in the VS Code extension host; the board and sidebar run in webviews. The rich-text editor uses Tiptap.
 - Board settings and Markdown story files are stored per repository under `ExtensionContext.storageUri`, outside the repository working tree.
 - `build.js` bundles the extension, board, and sidebar into `dist/`. The extension is distributed as a self-contained VSIX. See `README.md` for usage, storage, and development details.
@@ -42,12 +42,12 @@
 
 * Install the packaged extension locally
   >
-  > `code --install-extension code-kanban-1.0.0.vsix`
+  > `code --install-extension code-kanban-1.2.0.vsix`
   >
 
 * Debug the extension
   >
-  > Press **F5** in VS Code to build and launch the Extension Development Host. Open a repository folder there and run **Code Kanban: Open Kanban Board**.
+  > Press **F5** in VS Code to build and launch the Extension Development Host. Open a repository folder there and run **Code Kanban Pro: Open Kanban Board**.
 
 ## Code Style
 
@@ -64,5 +64,6 @@
 
 ## Misc
 
+- Unless the user says otherwise, finish each task with all completed work committed to `main` and pushed. Verify that local `main` matches GitHub, the working tree is clean, no open pull requests remain, and no work is left only on another branch. Preserve unfinished work by completing and merging it; do not discard it to satisfy these checks.
 - When specifically asked to check the project or files for errors, group all errors related to syntax up front to and correct immediately before proceeding.
 - Specific saved metadata created by Codex extension that is specific to this repository can be saved in <project_root>/.vscode/codex/

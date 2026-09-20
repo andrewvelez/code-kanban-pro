@@ -1,13 +1,14 @@
 {
   "name": "code-kanban",
-  "displayName": "Code Kanban",
-  "description": "A repository-specific Markdown kanban board with numbered story cards.",
-  "version": "1.0.0",
-  "publisher": "andrewvelez",
+  "displayName": "Code Kanban Pro",
+  "description": "A Markdown kanban board for VS Code with permanent story numbers, rich-text editing, and workspace-local storage.",
+  "version": "1.2.0",
+  "publisher": "Valdex",
+  "icon": "media/icon-128.png",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/andrewvelez/code-kanban.git"
+    "url": "https://github.com/andrewvelez/code-kanban-pro.git"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -26,20 +27,20 @@
       {
         "command": "code-kanban.open",
         "title": "Open Kanban Board",
-        "category": "Code Kanban",
+        "category": "Code Kanban Pro",
         "icon": "$(open-preview)"
       },
       {
         "command": "code-kanban.addStory",
         "title": "New Story",
-        "category": "Code Kanban"
+        "category": "Code Kanban Pro"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "code-kanban",
-          "title": "Code Kanban",
+          "title": "Code Kanban Pro",
           "icon": "media/kanban.svg"
         }
       ]

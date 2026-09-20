@@ -184,13 +184,18 @@ function renderColumn(column, stories, epic) {
   const collapsed = state.config.collapsed.includes(column.id);
   const node = el('section', `column${collapsed ? ' collapsed' : ''}`); node.dataset.status = column.id;
   node.setAttribute('aria-label', column.name);
-  const header = el('header', 'column-header'); const dot = el('span', 'dot'); dot.style.background = column.color;
-  header.append(dot, el('h2', '', column.name), el('span', 'count', items.length));
+  const header = el('header', 'column-header');
+  header.style.background = column.color;
+  const rgb = column.color.slice(1).match(/../g).map(hex => {
+    const value = parseInt(hex, 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  header.style.color = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2] > 0.179 ? '#000' : '#fff';
+  header.append(el('h2', '', column.name), el('span', 'count', items.length));
   header.append(button(`${collapsed ? 'Expand' : 'Collapse'} ${column.name}`, collapsed ? 'expand' : 'collapse', () => request('settings', { data: { collapsed: collapsed ? state.config.collapsed.filter(id => id !== column.id) : [...state.config.collapsed, column.id] } })));
   if (!collapsed) header.append(button(`Add story to ${column.name}`, 'plus', () => openNew(column.id)), button(`${column.name} options`, 'more', () => columnMenu(column)));
   node.append(header);
   if (!collapsed) {
-    const add = button('Add story', 'plus', () => openNew(column.id), 'add-story'); add.append('Add story'); node.append(add);
     const cards = el('div', 'cards'); items.forEach(story => cards.append(renderCard(story)));
     if (!items.length) cards.append(el('p', 'empty', filters.archived ? 'No archived stories' : 'No stories'));
     node.append(cards);
@@ -240,7 +245,73 @@ function renderCard(story) {
   node.addEventListener('dragend', () => { dragged = null; node.classList.remove('dragging'); clearDrop(); });
   return node;
 }
-async function openNew(status = state.config.defaultStatus) { await closeEditor(); openEditor(null, status); }
+async function openNew(status = state.config.defaultStatus) {
+  if (document.querySelector('.new-story[open]')) return;
+  const returnLabel = document.activeElement.getAttribute('aria-label');
+  await closeEditor();
+  if (document.querySelector('.new-story[open]')) return;
+  const node = dialog('New story'); node.className = 'new-story';
+  node.addEventListener('close', () => {
+    const label = returnLabel || `Add story to ${state.config.columns.find(column => column.id === status)?.name}`;
+    [...board.querySelectorAll('button')].find(control => control.getAttribute('aria-label') === label)?.focus();
+  });
+  const heading = node.querySelector('h2');
+  const close = button('Close new story', 'close', () => node.close()); heading.append(close);
+  const form = el('form'); const fields = {};
+  function field(label, key, control, parent = form) {
+    control.setAttribute('aria-label', `Story ${key === 'content' ? 'description' : key}`);
+    const row = el('label', 'new-story-field'); row.append(el('span', '', label), control);
+    fields[key] = control; parent.append(row); return control;
+  }
+  const titleInput = field('Title *', 'title', el('input'));
+  titleInput.required = true; titleInput.placeholder = 'Enter story title';
+  const description = field('Description', 'content', el('textarea'));
+  description.rows = 4; description.placeholder = 'Enter story description (Markdown supported)';
+  field('Labels', 'labels', el('input')).placeholder = 'Separate labels with commas';
+  const details = el('details'); details.append(el('summary', '', 'Story details'));
+  field('Status', 'status', select('Story status', state.config.columns.map(column => [column.id, column.name]), status), details);
+  field('Priority', 'priority', select('Story priority', priorities, state.config.defaultPriority), details);
+  for (const [label, key, type] of [['Assignee', 'assignee', 'text'], ['Epic', 'epic', 'text'], ['Due date', 'dueDate', 'date']]) {
+    const input = field(label, key, el('input'), details); input.type = type;
+  }
+  form.append(details);
+  const error = el('p', 'new-story-error'); error.setAttribute('role', 'alert'); error.hidden = true; form.append(error);
+  const footer = el('footer');
+  const cancel = button('Cancel', null, () => node.close());
+  const create = el('button', 'primary', 'Create story'); create.type = 'submit';
+  footer.append(cancel, create); form.append(footer); node.append(form);
+  let saving = false;
+  titleInput.addEventListener('input', () => titleInput.setCustomValidity(''));
+  node.addEventListener('cancel', event => { if (saving) event.preventDefault(); });
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (saving) return;
+    if (!titleInput.value.trim()) {
+      titleInput.setCustomValidity('Enter a story title.'); titleInput.reportValidity(); return;
+    }
+    saving = true; error.hidden = true;
+    const controls = [close, ...form.querySelectorAll('input, textarea, select, button')];
+    controls.forEach(control => { control.disabled = true; }); create.textContent = 'Creating…';
+    try {
+      await request('create', { data: {
+        content: `# ${titleInput.value.trim()}\n\n${description.value.trim()}`,
+        status: fields.status.value, priority: fields.priority.value,
+        labels: [...new Set(fields.labels.value.split(',').map(label => label.trim()).filter(Boolean))],
+        assignee: fields.assignee.value.trim() || null, epic: fields.epic.value.trim() || null,
+        dueDate: fields.dueDate.value || null
+      } });
+      node.close();
+    } catch (cause) {
+      error.textContent = cause.message; error.hidden = false;
+    } finally {
+      saving = false; controls.forEach(control => { control.disabled = false; }); create.textContent = 'Create story';
+    }
+  });
+  node.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); form.requestSubmit(); }
+  });
+  node.showModal(); titleInput.focus();
+}
 function openEditor(story, status) {
   session?.titleObserver?.disconnect();
   editor?.destroy(); workspace.querySelector('.editor')?.remove();

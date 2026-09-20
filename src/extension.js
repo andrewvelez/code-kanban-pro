@@ -9,7 +9,7 @@ function activate(context) {
   async function folderForBoard() {
     const folders = vscode.workspace.workspaceFolders;
     if (!context.storageUri || !folders?.length) {
-      await vscode.window.showInformationMessage('Open a repository folder or workspace to use Code Kanban.');
+      await vscode.window.showInformationMessage('Open a repository folder or workspace to use Code Kanban Pro.');
       return;
     }
     if (folders.length === 1) return folders[0];
@@ -102,7 +102,7 @@ function activate(context) {
     const nonce = randomBytes(16).toString('hex');
     const script = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist', sidebar ? 'sidebar.js' : 'board.js'));
     const css = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', sidebar ? 'sidebar.css' : 'board.css'));
-    panel.webview.html = `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${panel.webview.cspSource} data:; style-src ${panel.webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${css}"><title>Code Kanban</title></head><body><main id="app" aria-label="Kanban board"><p>Loading board…</p></main><script nonce="${nonce}" src="${script}"></script></body></html>`;
+    panel.webview.html = `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${panel.webview.cspSource} data:; style-src ${panel.webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${css}"><title>Code Kanban Pro</title></head><body><main id="app" aria-label="Kanban board"><p>Loading board…</p></main><script nonce="${nonce}" src="${script}"></script></body></html>`;
     return panel;
   }
   async function open(addStory = false, folder, number) {
@@ -122,7 +122,7 @@ function activate(context) {
       else panel.webview.postMessage(action);
     }
   }
-  const report = action => action().catch(error => vscode.window.showErrorMessage(`Code Kanban: ${error.message}`));
+  const report = action => action().catch(error => vscode.window.showErrorMessage(`Code Kanban Pro: ${error.message}`));
   context.subscriptions.push(
     vscode.commands.registerCommand('code-kanban.open', () => report(() => open())),
     vscode.commands.registerCommand('code-kanban.addStory', () => report(() => open(true))),
@@ -130,7 +130,7 @@ function activate(context) {
       async resolveWebviewView(view) {
         const folder = await folderForBoard();
         if (!folder) {
-          view.webview.html = '<!doctype html><html><body><p>Open a repository folder to use Code Kanban.</p></body></html>';
+          view.webview.html = '<!doctype html><html><body><p>Open a repository folder to use Code Kanban Pro.</p></body></html>';
           return;
         }
         attach(view, folder, true);
